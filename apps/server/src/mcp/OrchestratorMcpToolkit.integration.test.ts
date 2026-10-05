@@ -2317,6 +2317,15 @@ describe("orchestrator MCP toolkit", () => {
               interruptedWaitCall.structuredContent,
             ).pipe(Effect.orDie);
             expect(interruptedWait.status).toBe("interrupted");
+            expect(
+              (yield* orchestrator.getThreadProjection(activeThread.threadId)).turnItems.find(
+                (item) => item.type === "run_interrupt_result" && item.runId === activeRun.id,
+              ),
+            ).toMatchObject({
+              createdBy: "agent",
+              senderThreadId: parentThreadId,
+              message: "Run interrupted by an agent before provider start",
+            });
             const repeatedInterruptCall = yield* invoke("t3_thread_interrupt", {
               threadId: activeThread.threadId,
               runId: activeRun.id,

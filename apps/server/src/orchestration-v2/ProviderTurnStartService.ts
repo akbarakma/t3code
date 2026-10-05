@@ -173,6 +173,19 @@ export const layer: Layer.Layer<
               }),
             )
             .pipe(Effect.catchCause(() => Effect.succeed(false))),
+        loadRunInterruptRequest: () =>
+          projectionStore
+            .getTurnItem({
+              threadId: input.threadId,
+              itemId: idAllocator.derive.runSignalTurnItem({
+                runId: input.runId,
+                signal: "interrupt-request",
+              }),
+            })
+            .pipe(
+              Effect.map((item) => (item?.type === "run_interrupt_request" ? item : null)),
+              Effect.catchCause(() => Effect.succeed(null)),
+            ),
       };
     };
 
@@ -1241,6 +1254,7 @@ export const layer: Layer.Layer<
         shouldStartProviderTurn: runControls.shouldStartProviderTurn,
         shouldFinalizeRun: runControls.shouldFinalizeRun,
         hasUnpairedRunInterruptRequest: runControls.hasUnpairedRunInterruptRequest,
+        loadRunInterruptRequest: runControls.loadRunInterruptRequest,
         message: {
           messageId: message.id,
           text: userText,

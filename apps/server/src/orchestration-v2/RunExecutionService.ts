@@ -77,6 +77,11 @@ export interface InheritedBackgroundTurnItemRoute {
 
 type ProviderTerminalEvent = Extract<ProviderAdapterV2Event, { readonly type: "turn.terminal" }>;
 
+export type RunInterruptRequestTurnItem = Extract<
+  OrchestrationV2TurnItem,
+  { readonly type: "run_interrupt_request" }
+>;
+
 function isTerminalProviderTurnStatus(status: OrchestrationV2ProviderTurn["status"]): boolean {
   return (
     status === "completed" ||
@@ -517,6 +522,7 @@ export interface RunExecutionServiceV2StartRootRunInput {
   readonly shouldStartProviderTurn?: () => Effect.Effect<boolean, ProjectionStoreV2Error>;
   readonly shouldFinalizeRun?: () => Effect.Effect<boolean, ProjectionStoreV2Error>;
   readonly hasUnpairedRunInterruptRequest?: () => Effect.Effect<boolean, never>;
+  readonly loadRunInterruptRequest?: () => Effect.Effect<RunInterruptRequestTurnItem | null, never>;
   readonly message: ProviderAdapterV2TurnMessage;
   readonly modelSelection: ModelSelection;
   readonly runtimePolicy: ProviderAdapterV2RuntimePolicy;
@@ -562,6 +568,10 @@ export const layer: Layer.Layer<
       readonly attempt: OrchestrationV2RunAttempt;
       readonly shouldFinalizeRun?: () => Effect.Effect<boolean, ProjectionStoreV2Error>;
       readonly hasUnpairedRunInterruptRequest?: () => Effect.Effect<boolean, never>;
+      readonly loadRunInterruptRequest?: () => Effect.Effect<
+        RunInterruptRequestTurnItem | null,
+        never
+      >;
       readonly openRunOwnedSubagents?: OpenRunOwnedSubagentProjection;
       readonly terminal: ProviderTerminalEvent;
       readonly failureItemPersisted: boolean;
@@ -573,6 +583,7 @@ export const layer: Layer.Layer<
     }) =>
       Effect.gen(function* () {
         const completedAt = yield* DateTime.now;
+        const loadInterruptRequest = input.loadRunInterruptRequest ?? (() => Effect.succeed(null));
         const finalizedAttempt: OrchestrationV2RunAttempt | null = {
           ...input.attempt,
           status: input.terminal.status,
@@ -606,6 +617,7 @@ export const layer: Layer.Layer<
                       run: input.run,
                       rootNode: input.rootNode,
                       providerThread: input.providerThread,
+                      request: yield* loadInterruptRequest(),
                       completedAt,
                     }),
                   },
@@ -716,6 +728,7 @@ export const layer: Layer.Layer<
                       run: input.run,
                       rootNode: input.rootNode,
                       providerThread: input.providerThread,
+                      request: yield* loadInterruptRequest(),
                       completedAt,
                     }),
                   },
@@ -977,6 +990,9 @@ export const layer: Layer.Layer<
                   : {
                       hasUnpairedRunInterruptRequest: input.hasUnpairedRunInterruptRequest,
                     }),
+                ...(input.loadRunInterruptRequest === undefined
+                  ? {}
+                  : { loadRunInterruptRequest: input.loadRunInterruptRequest }),
                 openRunOwnedSubagents: openSubagents,
                 terminal,
                 failureItemPersisted: terminal.status === "failed",
@@ -1437,11 +1453,18 @@ export const layer: Layer.Layer<
   }),
 );
 
+// Empty unless a user or agent asked for the stop, so clients show no attribution.
+function interruptResultMessage(request: RunInterruptRequestTurnItem | null): string {
+  if (request === null || request.createdBy === "system") return "";
+  return request.createdBy === "agent" ? "Run interrupted by an agent" : "Run interrupted by user";
+}
+
 function makeInterruptResultTurnItem(input: {
   readonly idAllocator: IdAllocator.IdAllocatorV2Shape;
   readonly run: OrchestrationV2Run;
   readonly rootNode: OrchestrationV2ExecutionNode;
   readonly providerThread: OrchestrationV2ProviderThread;
+  readonly request: RunInterruptRequestTurnItem | null;
   readonly completedAt: DateTime.Utc;
 }): OrchestrationV2TurnItem {
   return {
@@ -1466,6 +1489,10 @@ function makeInterruptResultTurnItem(input: {
     completedAt: input.completedAt,
     updatedAt: input.completedAt,
     type: "run_interrupt_result",
-    message: "Run interrupted by user",
+    ...(input.request?.createdBy === undefined ? {} : { createdBy: input.request.createdBy }),
+    ...(input.request?.senderThreadId === undefined
+      ? {}
+      : { senderThreadId: input.request.senderThreadId }),
+    message: interruptResultMessage(input.request),
   };
 }

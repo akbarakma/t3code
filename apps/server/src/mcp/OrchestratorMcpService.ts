@@ -1690,6 +1690,8 @@ const make = Effect.gen(function* () {
             threadId: current.childThreadId,
             runId: activeRun.id,
             ...(input.reason === undefined ? {} : { reason: input.reason }),
+            createdBy: "agent",
+            senderThreadId: scope.thread.threadId,
           })
           .pipe(
             Effect.mapError((error) =>
@@ -2081,6 +2083,8 @@ const make = Effect.gen(function* () {
             threadId: input.threadId,
             ...(input.runId === undefined ? {} : { runId: input.runId }),
             ...(input.reason === undefined ? {} : { reason: input.reason }),
+            createdBy: "agent",
+            ...(parent === undefined ? {} : { senderThreadId: parent.thread.id }),
           })
           .pipe(
             Effect.mapError((error) =>

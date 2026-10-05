@@ -465,10 +465,12 @@ describe("OrchestratorMcpService", () => {
           clientRequestId: "cancel-dispose-failed-task",
         });
         assert.equal(result.status, "cancel_requested");
+        const commands = yield* Ref.get(dispatched);
         assert.deepEqual(
-          (yield* Ref.get(dispatched)).map((command) => (command as { type: string }).type),
+          commands.map((command) => (command as { type: string }).type),
           ["run.interrupt", "delegated_task.completion-delivery.dispose"],
         );
+        assert.deepInclude(commands[0], { createdBy: "agent", senderThreadId: parentThreadId });
       }).pipe(Effect.provide(OrchestratorMcpService.layer.pipe(Layer.provide(dependencies))));
     }),
   );

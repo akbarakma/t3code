@@ -55,6 +55,8 @@ export function withCreationProvenance(
     case "thread.merge_back":
     case "delegated_task.request":
       return { ...command, ...provenance };
+    case "run.interrupt":
+      return { ...command, createdBy: provenance.createdBy };
     default:
       return command;
   }
@@ -146,6 +148,8 @@ export interface ThreadManagementInterruptInput {
   readonly threadId: ThreadId;
   readonly runId?: RunId;
   readonly reason?: string;
+  readonly createdBy?: OrchestrationV2Actor;
+  readonly senderThreadId?: ThreadId;
 }
 
 export type ThreadManagementInterruptResult =
@@ -717,6 +721,8 @@ const make = Effect.gen(function* () {
         threadId: input.threadId,
         runId: interruptibleRun.id,
         ...(input.reason === undefined ? {} : { reason: input.reason }),
+        ...(input.createdBy === undefined ? {} : { createdBy: input.createdBy }),
+        ...(input.senderThreadId === undefined ? {} : { senderThreadId: input.senderThreadId }),
       });
       return { type: "interrupt_requested", run: interruptibleRun, dispatch } as const;
     });

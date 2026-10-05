@@ -93,6 +93,12 @@ const OrchestrationV2CreationFields = {
   creationSource: OrchestrationV2CreationSource,
 } as const;
 
+/** Who asked to stop a run. A `run.interrupt` without it is a client's Stop, so the user. */
+const OrchestrationV2RunInterruptAttributionFields = {
+  createdBy: Schema.optional(OrchestrationV2Actor),
+  senderThreadId: Schema.optional(ThreadId),
+} as const;
+
 export const OrchestrationV2NativeRefStrength = Schema.Literals(["strong", "weak", "none"]);
 export type OrchestrationV2NativeRefStrength = typeof OrchestrationV2NativeRefStrength.Type;
 
@@ -1402,11 +1408,13 @@ export const OrchestrationV2TurnItem = Schema.Union([
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemBaseFields,
+    ...OrchestrationV2RunInterruptAttributionFields,
     type: Schema.Literal("run_interrupt_request"),
     message: Schema.String,
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemBaseFields,
+    ...OrchestrationV2RunInterruptAttributionFields,
     type: Schema.Literal("run_interrupt_result"),
     message: Schema.String,
   }),
@@ -2174,11 +2182,13 @@ export const OrchestrationV2TurnItemJson = Schema.Union([
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemJsonBaseFields,
+    ...OrchestrationV2RunInterruptAttributionFields,
     type: Schema.Literal("run_interrupt_request"),
     message: Schema.String,
   }),
   Schema.Struct({
     ...OrchestrationV2TurnItemJsonBaseFields,
+    ...OrchestrationV2RunInterruptAttributionFields,
     type: Schema.Literal("run_interrupt_result"),
     message: Schema.String,
   }),
@@ -2830,6 +2840,7 @@ export const OrchestrationV2Command = Schema.Union([
     threadId: ThreadId,
     runId: RunId,
     reason: Schema.optional(Schema.String),
+    ...OrchestrationV2RunInterruptAttributionFields,
     holdQueue: Schema.optional(Schema.Boolean),
   }),
   Schema.Struct({

@@ -8106,6 +8106,10 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           }),
         { discard: true },
       );
+      const interruptAttribution = {
+        createdBy: command.createdBy ?? "user",
+        ...(command.senderThreadId === undefined ? {} : { senderThreadId: command.senderThreadId }),
+      } as const;
       const interruptRequestItem: OrchestrationV2TurnItem = {
         id: idAllocator.derive.runSignalTurnItem({
           runId: run.id,
@@ -8125,6 +8129,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         completedAt: now,
         updatedAt: now,
         type: "run_interrupt_request",
+        ...interruptAttribution,
         message: command.reason ?? "Interrupt requested",
       };
 
@@ -8161,7 +8166,13 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           completedAt: now,
           updatedAt: now,
           type: "run_interrupt_result",
-          message: "Run interrupted before provider start",
+          ...interruptAttribution,
+          message:
+            interruptAttribution.createdBy === "agent"
+              ? "Run interrupted by an agent before provider start"
+              : interruptAttribution.createdBy === "user"
+                ? "Run interrupted by user before provider start"
+                : "Run interrupted before provider start",
         };
         yield* emitEvent({
           type: "turn-item.updated",
