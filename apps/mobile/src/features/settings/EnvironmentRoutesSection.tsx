@@ -74,6 +74,10 @@ export function EnvironmentRoutesSection({
   );
   // Rows size to their content, so a drag measures how far it has moved past each one.
   const [heights, setHeights] = useState<ReadonlyMap<string, number>>(() => new Map());
+  // Each drop remounts the rows so the new order and the cleared drag offsets
+  // land in one frame. Kept rows would show their old offsets in their new
+  // slots until the animated style catches up, and the card flashes empty.
+  const [drops, setDrops] = useState(0);
   if (entry === undefined) return null;
 
   const byId = new Map(saved.map((route) => [connectionRouteId(route.target), route]));
@@ -156,7 +160,7 @@ export function EnvironmentRoutesSection({
                 : 0;
         return (
           <RouteRow
-            key={id}
+            key={`${id}:${drops}`}
             route={route}
             position={index + 1}
             count={routes.length}
@@ -173,6 +177,7 @@ export function EnvironmentRoutesSection({
             onDragMove={(translation) => setDrag({ id, translation })}
             onDragEnd={(translation, cancelled) => {
               setDrag(null);
+              setDrops((count) => count + 1);
               if (!cancelled) move(index, dropIndex(index, translation));
             }}
             onStep={(direction) => move(index, direction === "up" ? index - 1 : index + 1)}
