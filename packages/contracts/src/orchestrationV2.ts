@@ -93,7 +93,10 @@ const OrchestrationV2CreationFields = {
   creationSource: OrchestrationV2CreationSource,
 } as const;
 
-/** Who asked to stop a run. A `run.interrupt` without it is a client's Stop, so the user. */
+/**
+ * Who asked to stop a run. A stop command or request without it is a client's Stop, so the user;
+ * a result without it had no request.
+ */
 const OrchestrationV2RunInterruptAttributionFields = {
   createdBy: Schema.optional(OrchestrationV2Actor),
   senderThreadId: Schema.optional(ThreadId),

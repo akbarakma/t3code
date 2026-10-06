@@ -56,8 +56,10 @@ export function withCreationProvenance(
     case "thread.merge_back":
     case "delegated_task.request":
       return { ...command, ...provenance };
-    case "run.interrupt":
-      return { ...command, createdBy: provenance.createdBy };
+    case "run.interrupt": {
+      const { senderThreadId: _senderThreadId, ...interrupt } = command;
+      return { ...interrupt, createdBy: provenance.createdBy };
+    }
     default:
       return command;
   }

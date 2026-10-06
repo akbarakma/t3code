@@ -58,13 +58,16 @@ it("stamps authoritative provenance on commands that record who authored them", 
     commandId: CommandId.make("command:thread-management:interrupt"),
     threadId: ThreadId.make("thread:thread-management:interrupt"),
     runId: RunId.make("run:thread-management:interrupt"),
-    createdBy: "agent",
   };
   expect(
-    ThreadManagementService.withCreationProvenance(interrupt, {
-      createdBy: "user",
-      creationSource: "web",
-    }),
+    ThreadManagementService.withCreationProvenance(
+      {
+        ...interrupt,
+        createdBy: "agent",
+        senderThreadId: ThreadId.make("thread:thread-management:spoofed-sender"),
+      },
+      { createdBy: "user", creationSource: "web" },
+    ),
   ).toEqual({ ...interrupt, createdBy: "user" });
 });
 
